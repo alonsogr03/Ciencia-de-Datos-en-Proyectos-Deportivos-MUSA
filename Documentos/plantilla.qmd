@@ -1,0 +1,30 @@
+---
+title: "Título del Trabajo"
+author: "Alonso González Romero"
+course: "Ciencia de Datos en Proyectos Deportivos"
+date: today
+lang: es
+format:
+  html:
+    theme: cosmo
+    css: ../../Documentos/styles.css
+    toc: true
+    toc_float: true
+    code-fold: true
+    number_sections: true
+    mainfont: "Arial"
+    self-contained: true
+---
+
+<div class="header-container">
+  <img src="../../Documentos/logourjc.png" alt="Logo URJC" class="logo"/>
+  <img src="../../Documentos/musa.png" alt="Logo MUSA" class="logo"/>
+</div>
+
+# Ejercicio 1.
+
+```{python}
+print("Código de ejemplo.")
+```
+
+...

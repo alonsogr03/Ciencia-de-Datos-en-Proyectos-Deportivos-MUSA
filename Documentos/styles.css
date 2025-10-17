@@ -1,0 +1,17 @@
+/* styles.css */
+
+.quarto-title-block .quarto-title-banner {
+    background: #003366; /* Un azul oscuro profesional. Puedes cambiarlo por el color exacto de musa.png */
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.logo {
+    height: 60px; /* Ajusta la altura según sea necesario */
+}

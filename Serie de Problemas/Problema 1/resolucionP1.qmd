@@ -1,0 +1,208 @@
+---
+title: "Problema 1. Análisis de caso con datos."
+author: "Alonso González Romero"
+date: today
+lang: es
+format:
+  html:
+    theme: cosmo
+    css: ../../Documentos/styles.css
+    toc: true
+    toc_float: true
+    code-fold: true
+    number_sections: true
+    mainfont: "Arial"
+    self-contained: true
+---
+
+<div class="header-container">
+  <img src="../../Documentos/logourjc.png" alt="Logo URJC" class="logo"/>
+  <img src="../../Documentos/musa.png" alt="Logo MUSA" class="logo"/>
+</div>
+
+
+# Objetivo
+El objetivo de este problema es aplicar procesamiento básico de datos reales.
+
+# Importacion de librerias. 
+
+```{python}
+# Importacion de librerias. 
+import pandas as pd # Para la manipulacion de dataframes
+from itables import init_notebook_mode, show
+init_notebook_mode(all_interactive=True)
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle, Rectangle, Arc
+import seaborn as sns
+```
+
+# Lectura y descripción del dataframe.
+
+A continuación, se procede a importar los datos y visualizar las primeras filas del dataframe con el objetivo de entender las variables usadas:
+
+```{python}
+datos = pd.read_csv('datos_basket_eventos.csv')
+print(datos.head())
+```
+
+Se observan las siguientes variables: 
+
+- **jugador**: Se trata de un identificador del jugador. 
+- **minuto**: El minuto de juego en el cuál se ha producido el evento.
+- **tipo_evento**: El tipo de evento realizado por el jugador, pase, falta, tiro etc...
+- **x**: La posición en el eje X respecto a la pista de baloncesto.
+- **y**: La posición en el eje Y respecto a la pista de baloncesto.
+- **acierto**: Define si el evento realizado ha derivado en un acierto (pase completado, tiro realizado).
+
+
+# Ejercicios. 
+
+## Ejercicio 1. Filtra los tiros realizados en el último cuarto.
+
+Para ello, vamos primeramente a visualizar cuántos minutos tiene el partido, porque desconocemos si es un partido de NBA o ACB y los minutos varían. 
+
+```{python}
+minim = datos['minuto'].min()
+maxim = datos['minuto'].max()
+print(f"El minuto más pequeño es: {minim}. Y el más grande es: {maxim}")
+```
+
+
+Se observa que el partido dura 40 minutos por lo tanto, ya se tienen todos los datos necesarios para poder filtrar los tiros realizados el ultimo cuarto: 
+
+```{python}
+tiros_ultimo_cuarto = datos[(datos['minuto']>30) & (datos['tipo_evento']== 'tiro')]
+print(tiros_ultimo_cuarto)
+```
+
+
+## Ejercicio 2. Calcula el porcentaje de acierto global y por zona (zona central/laterales izq y derecha)
+
+Para ello, vamos a visualizar primeramente los rangos que tiene la pista, para ello: 
+
+```{python}
+rangos_X = [datos['x'].min(), datos['x'].max()]
+rangos_Y = [datos['y'].min(), datos['y'].max()]
+
+print(f"Los rangos para X: {rangos_X} \n Los rangos para Y: {rangos_Y}")
+```
+
+Vamos a suponer que lo que estamos viendo es una parte de la pista como si estuvieramos jugando sobre ella, es decir, el rango X nos dará el ancho de la pista y el rango Y el largo de la pista. A partir de aquí, y sabiendo que la X tiene un rango de 0-50, vamos a dividir en 3 zonas al campo: 
+
+```{python}
+division = 50/3
+zona_lat_izquierda = [0,division]
+zona_central = [division, division*2]
+zona_lat_derecha = [division*2, 50]
+
+print(f"Zona lateral izquierda: {zona_lat_izquierda} \n Zona central: {zona_central} \n Zona lateral derecha: {zona_lat_derecha}")
+
+```
+
+Bien, una vez extraidas las zonas, vamos a sacar los porcentajes de tiro por zona. Para ello, hacemos lo siguiente: 
+
+- Crear una nueva columna que defina la zona. 
+- Calcular los porcentajes de acierto, primero global y luego por zonas agrupando por la nueva columna realizada. 
+
+```{python}
+limites = [0, division, division *2, 50]
+etiquetas = ['Lateral Izquierda', 'Central', 'Lateral Derecha']
+tiros_ultimo_cuarto['zona'] = pd.cut(tiros_ultimo_cuarto['x'], bins = limites, labels = etiquetas, include_lowest=True)
+
+print(tiros_ultimo_cuarto.head())
+```
+
+Tras esto, vamos a visualizar los porcentajes de tiro: 
+
+```{python}
+porcentaje_tiro_global = (tiros_ultimo_cuarto[(tiros_ultimo_cuarto['acierto'] == 1)].shape[0]/tiros_ultimo_cuarto.shape[0])
+
+porcentaje_tiro_lat_izq = (tiros_ultimo_cuarto[(tiros_ultimo_cuarto['acierto']==1) & (tiros_ultimo_cuarto['zona'] == 'Lateral Izquierda')].shape[0])/(tiros_ultimo_cuarto[(tiros_ultimo_cuarto['zona'] == 'Lateral Izquierda')].shape[0])
+
+porcentaje_tiro_lat_der = (tiros_ultimo_cuarto[(tiros_ultimo_cuarto['acierto']==1) & (tiros_ultimo_cuarto['zona'] == 'Lateral Derecha')].shape[0])/(tiros_ultimo_cuarto[(tiros_ultimo_cuarto['zona'] == 'Lateral Derecha')].shape[0])
+
+porcentaje_tiro_central = (tiros_ultimo_cuarto[(tiros_ultimo_cuarto['acierto']==1) & (tiros_ultimo_cuarto['zona'] == 'Central')].shape[0])/(tiros_ultimo_cuarto[(tiros_ultimo_cuarto['zona'] == 'Central')].shape[0])
+
+print(f"La efectividad global es: {round(porcentaje_tiro_global,2)}. La efectividad en la zona central es: {round(porcentaje_tiro_central,2)}. La efectividad en la zona lateral izquierda es: {round(porcentaje_tiro_lat_izq,2)}. La efectividad en la zona lateral derecha es: {round(porcentaje_tiro_lat_der,2)}")
+```
+
+
+## Ejercicio 3. Representa en un mapa de tiro (Python)
+
+Para la representación del mapa de tiro, vamos a usar las librerías `matplotlib` y `seaborn`. Primero, crearemos una función que dibuje la media cancha de baloncesto respetando las dimensiones de nuestros datos (eje X de 0 a 50, eje Y de 0 a 90). Después, pintaremos sobre esa cancha los tiros realizados en el último cuarto, distinguiendo entre aciertos y fallos.
+
+```{python}
+def dibujar_cancha(ax=None, color='black', lw=2):
+    """
+    Dibuja una media cancha de baloncesto en un eje de matplotlib.
+    Las dimensiones se ajustan a los datos del problema (50x90).
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    # Canasta (aro y tablero)
+    aro = Circle((25, 5.25), radius=0.75, linewidth=lw, color=color, fill=False)
+    tablero = Rectangle((22, 4), 6, -1, linewidth=lw, color=color)
+
+    # Zona (líneas de 3 segundos)
+    zona_exterior = Rectangle((17, 0), 16, 19, linewidth=lw, color=color, fill=False)
+    zona_interior = Rectangle((19, 0), 12, 19, linewidth=lw, color=color, fill=False)
+
+    # Línea de tres puntos (arco y líneas rectas)
+    arco_triple = Arc((25, 6.25), 47.5, 47.5, theta1=0, theta2=180, linewidth=lw, color=color)
+    linea_triple_izq = plt.Line2D((3.25, 3.25), (0, 14), linewidth=lw, color=color)
+    linea_triple_der = plt.Line2D((46.75, 46.75), (0, 14), linewidth=lw, color=color)
+
+    # Círculo de tiro libre
+    circulo_superior = Arc((25, 19), 12, 12, theta1=0, theta2=180, linewidth=lw, color=color)
+    circulo_inferior = Arc((25, 19), 12, 12, theta1=180, theta2=360, linewidth=lw, color=color, linestyle='--')
+
+    # Lista de elementos Patch
+    elementos_patch = [aro, tablero, zona_exterior, zona_interior, arco_triple,
+                       circulo_superior, circulo_inferior]
+    
+    # Lista de elementos Line
+    elementos_linea = [linea_triple_izq, linea_triple_der]
+
+    # Añadir cada elemento con su método correspondiente
+    for elemento in elementos_patch:
+        ax.add_patch(elemento)
+    
+    for elemento in elementos_linea:
+        ax.add_line(elemento)
+
+    return ax
+
+# --- Creación del gráfico ---
+
+# 1. Filtrar solo los tiros (ya lo tienes en tiros_ultimo_cuarto)
+tiros_a_pintar = tiros_ultimo_cuarto
+
+# 2. Crear la figura y el eje para el gráfico
+plt.figure(figsize=(6, 5.5))
+ax = plt.gca()
+
+# 3. Dibujar la cancha en el eje
+dibujar_cancha(ax)
+
+# 4. Usar seaborn para pintar los tiros
+#    - 'x' e 'y' para las coordenadas
+#    - 'hue' para colorear por la columna 'acierto'
+#    - 'palette' para elegir los colores (rojo para fallo, verde para acierto)
+#    - 'style' para usar diferentes marcadores (círculo para acierto, 'x' para fallo)
+#    - 's' para aumentar el tamaño de los puntos
+sns.scatterplot(data=tiros_a_pintar, x='x', y='y', hue='acierto', style='acierto',
+                palette={0: 'red', 1: 'green'}, s=100, ax=ax)
+
+# 5. Ajustar los límites y la apariencia del gráfico
+plt.xlim(0, 50)
+plt.ylim(0, 94) # Ajustamos el límite Y para ver toda la media cancha (hasta la línea de fondo)
+plt.title('Mapa de Tiro (Último Cuarto)')
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.tick_params(labelbottom=False, labelleft=False, bottom=False, left=False) # Ocultar ejes y etiquetas
+plt.legend(title='Tiro', loc='upper right', labels=['Fallo', 'Acierto'])
+
+# 6. Mostrar el gráfico
+plt.show()
+```
