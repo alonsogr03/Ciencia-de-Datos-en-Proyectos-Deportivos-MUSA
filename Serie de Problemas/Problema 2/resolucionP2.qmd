@@ -1,0 +1,62 @@
+---
+title: "Problema 2. Evaluación de cohesión táctica."
+author: "Alonso González Romero"
+course: "Ciencia de Datos en Proyectos Deportivos"
+date: today
+lang: es
+format:
+  html:
+    theme: cosmo
+    css: ../../Documentos/styles.css
+    toc: true
+    toc_float: true
+    code-fold: true
+    number_sections: true
+    mainfont: "Arial"
+    self-contained: true
+---
+
+<div class="header-container">
+  <img src="../../Documentos/logourjc.png" alt="Logo URJC" class="logo"/>
+  <img src="../../Documentos/musa.png" alt="Logo MUSA" class="logo"/>
+</div>
+
+
+```{python}
+import pandas as pd
+from itables import init_notebook_mode, show
+init_notebook_mode(all_interactive=True)
+datos= pd.read_csv('Serie de Problemas/Problema 2/posiciones_cohesion_tactica.csv')
+```
+
+
+# Objetivo. 
+
+Medir y visualizar un concepto colectivo.
+
+# Enunciado.
+
+Dispones de los datos de posición media (x,y) de 5 jugadores en diferentes posesiones de un partido de hockey hierba. 
+
+# Tarea 1. Calcula la distancia media entre los jugadores en cada posesión.
+
+Antes de ello, vamos a visualizar un poco el formato del dataframe, para ello: 
+
+```{python}
+datos
+```
+
+Se puede observar cómo tenemos, el número de posesión, el jugador que la realiza y la posición en la que se encuentra, por lo tanto, vamos a continuación a agrupar por posesión, y calcular la media tanto de la variable x como la variable y. Para ello:
+
+```{python}
+distancia_media_posesion = datos.groupby('posesion')[['x','y']].mean().reset_index()
+distancia_media_posesion
+```
+
+
+
+```{python}
+print("Código de ejemplo.")
+```
+
+...
