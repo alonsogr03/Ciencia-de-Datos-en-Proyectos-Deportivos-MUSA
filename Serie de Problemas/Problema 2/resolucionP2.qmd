@@ -26,7 +26,8 @@ format:
 import pandas as pd
 from itables import init_notebook_mode, show
 init_notebook_mode(all_interactive=True)
-datos= pd.read_csv('Serie de Problemas/Problema 2/posiciones_cohesion_tactica.csv')
+#datos= pd.read_csv('Serie de Problemas/Problema 2/posiciones_cohesion_tactica.csv')
+datos= pd.read_csv('posiciones_cohesion_tactica.csv')
 ```
 
 
@@ -59,4 +60,285 @@ distancia_media_posesion
 print("Código de ejemplo.")
 ```
 
-...
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.spatial import ConvexHull
+from matplotlib.patches import Rectangle
+
+# Función para dibujar un campo de hockey hierba
+def dibujar_campo_hockey(ax=None, color='white', line_color='black', lw=2):
+    """
+    Dibuja un campo de hockey hierba básico
+    """
+    if ax is None:
+        ax = plt.gca()
+    
+    # Campo principal (rectángulo)
+    campo = Rectangle((0, 0), 100, 60, linewidth=lw, edgecolor=line_color, 
+                     facecolor=color, fill=True)
+    ax.add_patch(campo)
+    
+    # Línea central
+    ax.axvline(x=50, color=line_color, linewidth=lw)
+    
+    # Círculo central
+    circulo_central = plt.Circle((50, 30), 9.15, fill=False, 
+                                color=line_color, linewidth=lw)
+    ax.add_patch(circulo_central)
+    
+    # Áreas de portería (simplificadas)
+    # Área izquierda
+    area_izq = Rectangle((0, 20), 16, 20, linewidth=lw, 
+                        edgecolor=line_color, facecolor='none')
+    ax.add_patch(area_izq)
+    
+    # Área derecha
+    area_der = Rectangle((84, 20), 16, 20, linewidth=lw, 
+                        edgecolor=line_color, facecolor='none')
+    ax.add_patch(area_der)
+    
+    # Porterías
+    porteria_izq = Rectangle((0, 27), 3, 6, linewidth=lw+1, 
+                            edgecolor=line_color, facecolor='gray')
+    ax.add_patch(porteria_izq)
+    
+    porteria_der = Rectangle((97, 27), 3, 6, linewidth=lw+1, 
+                            edgecolor=line_color, facecolor='gray')
+    ax.add_patch(porteria_der)
+    
+    return ax
+
+# Función para calcular y visualizar el convex hull
+def calcular_convex_hull_area(df_posesion):
+    """
+    Calcula el área del convex hull de las posiciones de los jugadores
+    """
+    puntos = df_posesion[['x', 'y']].values
+    
+    # Necesitamos al menos 3 puntos para formar un polígono
+    if len(puntos) < 3:
+        return 0, puntos
+    
+    try:
+        hull = ConvexHull(puntos)
+        return hull.volume, puntos[hull.vertices]  # volume es el área en 2D
+    except:
+        return 0, puntos
+
+# Calcular el convex hull para cada posesión
+posesiones_unicas = datos['posesion'].unique()
+areas_convex_hull = []
+
+print("Análisis de cohesión táctica por posesión:\n")
+
+for posesion in posesiones_unicas:
+    datos_posesion = datos[datos['posesion'] == posesion]
+    area, vertices_hull = calcular_convex_hull_area(datos_posesion)
+    areas_convex_hull.append({
+        'posesion': posesion,
+        'area_convex_hull': area,
+        'num_jugadores': len(datos_posesion)
+    })
+    print(f"Posesión {posesion}: Área = {area:.2f}, Jugadores = {len(datos_posesion)}")
+
+# Crear DataFrame con los resultados
+df_cohesion = pd.DataFrame(areas_convex_hull)
+df_cohesion
+```
+
+Ahora vamos a visualizar cada posesión en el campo de hockey hierba:
+
+```{python}
+# Visualización limpia y profesional
+# Paleta de colores profesional para los jugadores
+colores_jugadores = ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6']
+nombres_jugadores = ['Jugador 1', 'Jugador 2', 'Jugador 3', 'Jugador 4', 'Jugador 5']
+
+# Visualizar cada posesión individualmente
+for posesion in posesiones_unicas:
+    plt.figure(figsize=(10, 6))
+    ax = plt.gca()
+    
+    # Filtrar datos de la posesión actual
+    datos_posesion = datos[datos['posesion'] == posesion]
+    
+    # Plotear las posiciones de los jugadores
+    for j, jugador in enumerate(sorted(datos_posesion['jugador'].unique())):
+        datos_jugador = datos_posesion[datos_posesion['jugador'] == jugador]
+        x = datos_jugador['x'].iloc[0]
+        y = datos_jugador['y'].iloc[0]
+        
+        # Puntos pequeños y elegantes
+        ax.scatter(x, y, c=colores_jugadores[j], s=80, 
+                  edgecolors='white', linewidth=1.5, zorder=5, 
+                  label=nombres_jugadores[j], alpha=0.9)
+    
+    # Calcular y dibujar solo el convex hull (sin relleno)
+    area, vertices_hull = calcular_convex_hull_area(datos_posesion)
+    
+    if area > 0 and len(vertices_hull) >= 3:
+        # Cerrar el polígono añadiendo el primer punto al final
+        hull_closed = np.vstack([vertices_hull, vertices_hull[0]])
+        # Solo la línea del convex hull, sin relleno
+        ax.plot(hull_closed[:, 0], hull_closed[:, 1], 
+               color='#34495E', linewidth=2.5, zorder=3, 
+               linestyle='-', alpha=0.8)
+    
+    # Configuración limpia del gráfico
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 60)
+    ax.set_aspect('equal')
+    
+    # Título elegante
+    ax.set_title(f'Posesión {posesion} - Área de Cohesión: {area:.2f} m²', 
+                fontsize=14, fontweight='bold', pad=15, color='#2C3E50')
+    
+    # Ejes limpios
+    ax.set_xlabel('Posición X (metros)', fontsize=11, color='#34495E')
+    ax.set_ylabel('Posición Y (metros)', fontsize=11, color='#34495E')
+    
+    # Grid sutil
+    ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.5, color='#BDC3C7')
+    
+    # Leyenda profesional
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', 
+             frameon=True, fancybox=True, shadow=True, 
+             fontsize=10, title='Jugadores', title_fontsize=11)
+    
+    # Bordes del gráfico
+    ax.spines['top'].set_color('#BDC3C7')
+    ax.spines['right'].set_color('#BDC3C7')
+    ax.spines['bottom'].set_color('#BDC3C7')
+    ax.spines['left'].set_color('#BDC3C7')
+    
+    plt.tight_layout()
+    plt.show()
+
+# Mostrar resumen estadístico
+print("\n" + "="*50)
+print("RESUMEN ESTADÍSTICO DE COHESIÓN TÁCTICA")
+print("="*50)
+print(f"Área promedio del convex hull: {df_cohesion['area_convex_hull'].mean():.2f} m²")
+print(f"Área mínima: {df_cohesion['area_convex_hull'].min():.2f} m²")
+print(f"Área máxima: {df_cohesion['area_convex_hull'].max():.2f} m²")
+print(f"Desviación estándar: {df_cohesion['area_convex_hull'].std():.2f} m²")
+```
+
+Gráfico comparativo limpio de todas las posesiones:
+
+```{python}
+# Gráfico comparativo elegante con todas las posesiones
+fig, axes = plt.subplots(2, 5, figsize=(18, 8))
+axes = axes.flatten()
+
+for i, posesion in enumerate(posesiones_unicas):
+    ax = axes[i]
+    
+    datos_posesion = datos[datos['posesion'] == posesion]
+    
+    # Plotear jugadores con puntos pequeños
+    for j, jugador in enumerate(sorted(datos_posesion['jugador'].unique())):
+        datos_jugador = datos_posesion[datos_posesion['jugador'] == jugador]
+        x = datos_jugador['x'].iloc[0]
+        y = datos_jugador['y'].iloc[0]
+        
+        ax.scatter(x, y, c=colores_jugadores[j], s=60, 
+                  edgecolors='white', linewidth=1, alpha=0.9)
+    
+    # Convex hull solo con línea
+    area, vertices_hull = calcular_convex_hull_area(datos_posesion)
+    if area > 0 and len(vertices_hull) >= 3:
+        hull_closed = np.vstack([vertices_hull, vertices_hull[0]])
+        ax.plot(hull_closed[:, 0], hull_closed[:, 1], 
+               color='#34495E', linewidth=1.8, alpha=0.8)
+    
+    # Configuración de cada subplot
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 60)
+    ax.set_aspect('equal')
+    ax.set_title(f'Posesión {posesion}\nÁrea: {area:.1f} m²', 
+                fontsize=10, fontweight='bold', color='#2C3E50')
+    
+    # Grid sutil
+    ax.grid(True, alpha=0.2, linestyle='-', linewidth=0.5)
+    
+    # Ejes limpios
+    ax.tick_params(axis='both', which='major', labelsize=8, colors='#7F8C8D')
+    ax.set_xlabel('X (m)', fontsize=9, color='#34495E')
+    ax.set_ylabel('Y (m)', fontsize=9, color='#34495E')
+    
+    # Bordes suaves
+    for spine in ax.spines.values():
+        spine.set_color('#BDC3C7')
+        spine.set_linewidth(0.8)
+
+# Título general
+plt.suptitle('Análisis Comparativo de Cohesión Táctica por Posesiones', 
+             fontsize=16, fontweight='bold', y=0.98, color='#2C3E50')
+
+# Leyenda general
+handles = [plt.Line2D([0], [0], marker='o', color='w', 
+                     markerfacecolor=colores_jugadores[i], markersize=8, 
+                     label=nombres_jugadores[i]) for i in range(5)]
+fig.legend(handles=handles, loc='center', bbox_to_anchor=(0.5, 0.02), 
+          ncol=5, frameon=False, fontsize=10)
+
+plt.tight_layout()
+plt.subplots_adjust(bottom=0.08, top=0.92)
+plt.show()
+```
+
+Gráfico de evolución profesional:
+
+```{python}
+# Gráfico de evolución elegante
+plt.figure(figsize=(12, 6))
+
+plt.plot(df_cohesion['posesion'], df_cohesion['area_convex_hull'], 
+         marker='o', linewidth=2.5, markersize=8, color='#3498DB', 
+         markerfacecolor='#E74C3C', markeredgecolor='white', markeredgewidth=2)
+
+plt.fill_between(df_cohesion['posesion'], df_cohesion['area_convex_hull'], 
+                 alpha=0.2, color='#3498DB')
+
+# Línea de promedio
+promedio = df_cohesion['area_convex_hull'].mean()
+plt.axhline(y=promedio, color='#E67E22', linestyle='--', linewidth=2, 
+           alpha=0.8, label=f'Promedio: {promedio:.2f} m²')
+
+# Configuración del gráfico
+plt.title('Evolución de la Cohesión Táctica del Equipo', 
+          fontsize=16, fontweight='bold', pad=20, color='#2C3E50')
+plt.xlabel('Número de Posesión', fontsize=12, color='#34495E')
+plt.ylabel('Área del Convex Hull (m²)', fontsize=12, color='#34495E')
+
+# Grid elegante
+plt.grid(True, alpha=0.3, linestyle='-', linewidth=0.5, color='#BDC3C7')
+
+# Añadir valores en cada punto
+for i, row in df_cohesion.iterrows():
+    plt.annotate(f'{row["area_convex_hull"]:.1f}', 
+                (row['posesion'], row['area_convex_hull']),
+                textcoords="offset points", xytext=(0,10), ha='center',
+                fontsize=9, fontweight='bold', color='#2C3E50',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', 
+                         edgecolor='#BDC3C7', alpha=0.8))
+
+# Leyenda y configuración final
+plt.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+plt.xticks(df_cohesion['posesion'], fontsize=10)
+plt.yticks(fontsize=10)
+
+# Bordes del gráfico
+ax = plt.gca()
+for spine in ax.spines.values():
+    spine.set_color('#BDC3C7')
+
+plt.tight_layout()
+plt.show()
+```
+
+
+# Tarea 3. Interpretación de los resultados.
